@@ -73,7 +73,8 @@ print("ROC AUC:", roc)
 # =============================
 # 5. SAVE MODEL ARTIFACT
 # =============================
-joblib.dump(best_model, "best_random_forest.pkl")
-print("Model saved as best_random_forest.pkl")
+joblib.dump(best_model, "MLProject/best_random_forest.pkl")
+print("Model saved to MLProject/best_random_forest.pkl")
 
 print("\n=== TRAINING SELESAI (CI + LOCAL OK!) ===\n")
+
