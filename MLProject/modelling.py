@@ -75,9 +75,11 @@ print("ROC AUC:", roc)
 # =============================
 import os
 
-os.makedirs("MLProject", exist_ok=True)
+# folder khusus untuk output
+OUTPUT_DIR = "artifacts"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-model_path = "MLProject/best_random_forest.pkl"
+model_path = f"{OUTPUT_DIR}/best_random_forest.pkl"
 joblib.dump(best_model, model_path)
 
 mlflow.log_artifact(model_path)
