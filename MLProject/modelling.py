@@ -1,7 +1,6 @@
 import argparse
 import pandas as pd
 import joblib
-import mlflow
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
@@ -53,43 +52,28 @@ grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
 
 # =============================
-# 4. MLFLOW LOGGING (NO start_run!)
+# 4. EVALUATION (PRINT ONLY)
 # =============================
-
-# Disable autolog to avoid conflicts
-mlflow.autolog(disable=True)
-
-# --- Log params manually ---
-mlflow.log_params(grid.best_params_)
-
-# --- Compute predictions ---
 y_pred = best_model.predict(X_test)
 y_proba = best_model.predict_proba(X_test)[:, 1]
 
-# --- Compute metrics ---
 acc = accuracy_score(y_test, y_pred)
 prec = precision_score(y_test, y_pred, zero_division=0)
 rec = recall_score(y_test, y_pred, zero_division=0)
 f1 = f1_score(y_test, y_pred)
 roc = roc_auc_score(y_test, y_proba)
-cm = confusion_matrix(y_test, y_pred)
 
-# --- Log metrics manually ---
-mlflow.log_metric("accuracy", acc)
-mlflow.log_metric("precision", prec)
-mlflow.log_metric("recall", rec)
-mlflow.log_metric("f1_score", f1)
-mlflow.log_metric("roc_auc", roc)
-
-mlflow.log_metric("true_negative", cm[0][0])
-mlflow.log_metric("false_positive", cm[0][1])
-mlflow.log_metric("false_negative", cm[1][0])
-mlflow.log_metric("true_positive", cm[1][1])
+print("Best Parameters:", grid.best_params_)
+print("Accuracy:", acc)
+print("Precision:", prec)
+print("Recall:", rec)
+print("F1 Score:", f1)
+print("ROC AUC:", roc)
 
 # =============================
 # 5. SAVE MODEL ARTIFACT
 # =============================
 joblib.dump(best_model, "best_random_forest.pkl")
-mlflow.log_artifact("best_random_forest.pkl")
+print("Model saved as best_random_forest.pkl")
 
 print("\n=== TRAINING SELESAI (CI + LOCAL OK!) ===\n")
