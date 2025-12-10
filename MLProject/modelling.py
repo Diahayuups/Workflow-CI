@@ -1,7 +1,7 @@
 import argparse
 import pandas as pd
 import joblib
-
+import mlflow
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
@@ -9,19 +9,18 @@ from sklearn.metrics import (
     roc_auc_score, confusion_matrix
 )
 
-import mlflow
-import mlflow.sklearn
-
-
-# ============ ARGUMENT PARSER (WAJIB UNTUK MLflow Project) ============
+# =============================
+# 1. PARSE ARGUMENT
+# =============================
 parser = argparse.ArgumentParser()
-parser.add_argument("--data_path", type=str, required=True)
+parser.add_argument("--data_path", type=str, default="dataset/telco_processed.csv")
 args = parser.parse_args()
 
 print("DATA PATH:", args.data_path)
 
-# ============ LOAD DATASET ============
-
+# =============================
+# 2. LOAD DATASET
+# =============================
 df = pd.read_csv(args.data_path)
 
 X = df.drop(columns=["Churn"])
@@ -31,8 +30,9 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
-# ============ RANDOM FOREST TUNING ============
-
+# =============================
+# 3. GRIDSEARCH TUNING
+# =============================
 model = RandomForestClassifier(random_state=42)
 
 param_grid = {
@@ -42,14 +42,19 @@ param_grid = {
 }
 
 grid = GridSearchCV(
-    model, param_grid, cv=3, scoring="f1", n_jobs=-1
+    estimator=model,
+    param_grid=param_grid,
+    cv=3,
+    scoring="f1",
+    n_jobs=-1
 )
 
 grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
 
-# ============ MLFLOW LOGGING ============
-
+# =============================
+# 4. MLFLOW LOGGING (LOCAL ONLY)
+# =============================
 with mlflow.start_run():
 
     mlflow.log_params(grid.best_params_)
@@ -75,8 +80,8 @@ with mlflow.start_run():
     mlflow.log_metric("false_negative", cm[1][0])
     mlflow.log_metric("true_positive", cm[1][1])
 
-    # Save model
+    # save model
     joblib.dump(best_model, "best_random_forest.pkl")
     mlflow.log_artifact("best_random_forest.pkl")
 
-print("TRAINING BERHASIL! Model disimpan sebagai best_random_forest.pkl")
+print("TRAINING SELESAI.")
