@@ -55,6 +55,8 @@ best_model = grid.best_estimator_
 # =============================
 # 4. MLFLOW LOGGING (LOCAL ONLY)
 # =============================
+mlflow.autolog(disable=True)
+
 with mlflow.start_run():
 
     mlflow.log_params(grid.best_params_)
@@ -85,3 +87,4 @@ with mlflow.start_run():
     mlflow.log_artifact("best_random_forest.pkl")
 
 print("TRAINING SELESAI.")
+
