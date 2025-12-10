@@ -10,7 +10,7 @@ from sklearn.metrics import (
 )
 
 # =============================
-# 1. PARSE ARGUMENT
+# 1. PARSE INPUT ARGUMENT
 # =============================
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, default="dataset/telco_processed.csv")
@@ -53,38 +53,43 @@ grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
 
 # =============================
-# 4. MLFLOW LOGGING (LOCAL ONLY)
+# 4. MLFLOW LOGGING (NO start_run!)
 # =============================
+
+# Disable autolog to avoid conflicts
 mlflow.autolog(disable=True)
 
-with mlflow.start_run():
+# --- Log params manually ---
+mlflow.log_params(grid.best_params_)
 
-    mlflow.log_params(grid.best_params_)
+# --- Compute predictions ---
+y_pred = best_model.predict(X_test)
+y_proba = best_model.predict_proba(X_test)[:, 1]
 
-    y_pred = best_model.predict(X_test)
-    y_proba = best_model.predict_proba(X_test)[:, 1]
+# --- Compute metrics ---
+acc = accuracy_score(y_test, y_pred)
+prec = precision_score(y_test, y_pred, zero_division=0)
+rec = recall_score(y_test, y_pred, zero_division=0)
+f1 = f1_score(y_test, y_pred)
+roc = roc_auc_score(y_test, y_proba)
+cm = confusion_matrix(y_test, y_pred)
 
-    acc = accuracy_score(y_test, y_pred)
-    prec = precision_score(y_test, y_pred, zero_division=0)
-    rec = recall_score(y_test, y_pred, zero_division=0)
-    f1 = f1_score(y_test, y_pred)
-    roc = roc_auc_score(y_test, y_proba)
-    cm = confusion_matrix(y_test, y_pred)
+# --- Log metrics manually ---
+mlflow.log_metric("accuracy", acc)
+mlflow.log_metric("precision", prec)
+mlflow.log_metric("recall", rec)
+mlflow.log_metric("f1_score", f1)
+mlflow.log_metric("roc_auc", roc)
 
-    mlflow.log_metric("accuracy", acc)
-    mlflow.log_metric("precision", prec)
-    mlflow.log_metric("recall", rec)
-    mlflow.log_metric("f1_score", f1)
-    mlflow.log_metric("roc_auc", roc)
+mlflow.log_metric("true_negative", cm[0][0])
+mlflow.log_metric("false_positive", cm[0][1])
+mlflow.log_metric("false_negative", cm[1][0])
+mlflow.log_metric("true_positive", cm[1][1])
 
-    mlflow.log_metric("true_negative", cm[0][0])
-    mlflow.log_metric("false_positive", cm[0][1])
-    mlflow.log_metric("false_negative", cm[1][0])
-    mlflow.log_metric("true_positive", cm[1][1])
+# =============================
+# 5. SAVE MODEL ARTIFACT
+# =============================
+joblib.dump(best_model, "best_random_forest.pkl")
+mlflow.log_artifact("best_random_forest.pkl")
 
-    # save model
-    joblib.dump(best_model, "best_random_forest.pkl")
-    mlflow.log_artifact("best_random_forest.pkl")
-
-print("TRAINING SELESAI.")
-
+print("\n=== TRAINING SELESAI (CI + LOCAL OK!) ===\n")
