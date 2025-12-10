@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
     - name: Checkout Repository
       uses: actions/checkout@v4
 
@@ -26,8 +25,9 @@ jobs:
     - name: Run MLflow Project
       run: mlflow run MLProject --env-manager=local
 
-    - name: Upload model artifacts
+    - name: Upload trained model artifact
       uses: actions/upload-artifact@v4
       with:
-        name: churn-model-artifacts
-        path: mlruns
+        name: trained-model
+        path: MLProject/best_random_forest.pkl
+        if-no-files-found: warn
