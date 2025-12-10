@@ -1,6 +1,4 @@
 import argparse
-import dagshub
-import mlflow
 import pandas as pd
 import joblib
 
@@ -11,34 +9,18 @@ from sklearn.metrics import (
     roc_auc_score, confusion_matrix
 )
 
-# ============================================================
-# 1. PARSE INPUT (WAJIB UNTUK MLflow Project)
-# ============================================================
+import mlflow
+import mlflow.sklearn
 
+
+# ============ ARGUMENT PARSER (WAJIB UNTUK MLflow Project) ============
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, required=True)
 args = parser.parse_args()
 
-print(f"Loading dataset from: {args.data_path}")
+print("DATA PATH:", args.data_path)
 
-# ============================================================
-# 2. CONNECT DAGSHUB + MLFLOW
-# ============================================================
-
-dagshub.init(
-    repo_owner='Diahayuups',
-    repo_name='my-first-repo',
-    mlflow=True
-)
-
-mlflow.set_tracking_uri("https://dagshub.com/Diahayuups/my-first-repo.mlflow")
-mlflow.set_experiment("RandomForest_Tuning")
-
-print("Connected to DagsHub successfully!")
-
-# ============================================================
-# 3. LOAD DATASET
-# ============================================================
+# ============ LOAD DATASET ============
 
 df = pd.read_csv(args.data_path)
 
@@ -49,9 +31,7 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
-# ============================================================
-# 4. GRID SEARCH TUNING
-# ============================================================
+# ============ RANDOM FOREST TUNING ============
 
 model = RandomForestClassifier(random_state=42)
 
@@ -62,19 +42,13 @@ param_grid = {
 }
 
 grid = GridSearchCV(
-    estimator=model,
-    param_grid=param_grid,
-    cv=3,
-    scoring="f1",
-    n_jobs=-1
+    model, param_grid, cv=3, scoring="f1", n_jobs=-1
 )
 
 grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
 
-# ============================================================
-# 5. MLFLOW LOGGING
-# ============================================================
+# ============ MLFLOW LOGGING ============
 
 with mlflow.start_run():
 
@@ -101,13 +75,8 @@ with mlflow.start_run():
     mlflow.log_metric("false_negative", cm[1][0])
     mlflow.log_metric("true_positive", cm[1][1])
 
+    # Save model
     joblib.dump(best_model, "best_random_forest.pkl")
     mlflow.log_artifact("best_random_forest.pkl")
 
-print("\n===== TRAINING COMPLETED SUCCESSFULLY =====")
-print("Best Params:", grid.best_params_)
-print("Accuracy:", acc)
-print("Precision:", prec)
-print("Recall:", rec)
-print("F1 Score:", f1)
-print("ROC AUC:", roc)
+print("TRAINING BERHASIL! Model disimpan sebagai best_random_forest.pkl")
