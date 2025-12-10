@@ -1,3 +1,4 @@
+import argparse
 import dagshub
 import mlflow
 import pandas as pd
@@ -11,7 +12,17 @@ from sklearn.metrics import (
 )
 
 # ============================================================
-# 1. CONNECT DAGSHUB + MLFLOW
+# 1. PARSE INPUT (WAJIB UNTUK MLflow Project)
+# ============================================================
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--data_path", type=str, required=True)
+args = parser.parse_args()
+
+print(f"Loading dataset from: {args.data_path}")
+
+# ============================================================
+# 2. CONNECT DAGSHUB + MLFLOW
 # ============================================================
 
 dagshub.init(
@@ -26,10 +37,10 @@ mlflow.set_experiment("RandomForest_Tuning")
 print("Connected to DagsHub successfully!")
 
 # ============================================================
-# 2. LOAD DATASET
+# 3. LOAD DATASET
 # ============================================================
 
-df = pd.read_csv("telco_processed.csv")
+df = pd.read_csv(args.data_path)
 
 X = df.drop(columns=["Churn"])
 y = df["Churn"]
@@ -39,7 +50,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # ============================================================
-# 3. HYPERPARAMETER TUNING (GRID SEARCH)
+# 4. GRID SEARCH TUNING
 # ============================================================
 
 model = RandomForestClassifier(random_state=42)
@@ -59,23 +70,19 @@ grid = GridSearchCV(
 )
 
 grid.fit(X_train, y_train)
-
 best_model = grid.best_estimator_
 
 # ============================================================
-# 4. MLFLOW LOGGING (MANUAL — SAFE FOR DAGSHUB)
+# 5. MLFLOW LOGGING
 # ============================================================
 
 with mlflow.start_run():
 
-    # ---- Log hyperparameters
     mlflow.log_params(grid.best_params_)
 
-    # ---- Predict test data
     y_pred = best_model.predict(X_test)
     y_proba = best_model.predict_proba(X_test)[:, 1]
 
-    # ---- Metrics
     acc = accuracy_score(y_test, y_pred)
     prec = precision_score(y_test, y_pred, zero_division=0)
     rec = recall_score(y_test, y_pred, zero_division=0)
@@ -83,32 +90,24 @@ with mlflow.start_run():
     roc = roc_auc_score(y_test, y_proba)
     cm = confusion_matrix(y_test, y_pred)
 
-    # ---- Log metrics
     mlflow.log_metric("accuracy", acc)
     mlflow.log_metric("precision", prec)
     mlflow.log_metric("recall", rec)
     mlflow.log_metric("f1_score", f1)
     mlflow.log_metric("roc_auc", roc)
 
-    # ---- Log confusion matrix values
     mlflow.log_metric("true_negative", cm[0][0])
     mlflow.log_metric("false_positive", cm[0][1])
     mlflow.log_metric("false_negative", cm[1][0])
     mlflow.log_metric("true_positive", cm[1][1])
 
-    # ========================================================
-    # 5. SAVE MODEL LOCALLY (NO NEW MLFLOW ENDPOINT)
-    # ========================================================
-
     joblib.dump(best_model, "best_random_forest.pkl")
     mlflow.log_artifact("best_random_forest.pkl")
 
-print("\n===== TUNING COMPLETED SUCCESSFULLY =====")
+print("\n===== TRAINING COMPLETED SUCCESSFULLY =====")
 print("Best Params:", grid.best_params_)
 print("Accuracy:", acc)
 print("Precision:", prec)
 print("Recall:", rec)
 print("F1 Score:", f1)
 print("ROC AUC:", roc)
-
-print("\nModel saved as best_random_forest.pkl and logged to DagsHub successfully!\n")
