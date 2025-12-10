@@ -1,9 +1,0 @@
-name: telco_churn_training
-
-conda_env: conda.yaml
-
-entry_points:
-  main:
-    parameters:
-      data_path: { "type": "string", "default": "dataset/telco_processed.csv" }
-    command: "python modelling.py"
