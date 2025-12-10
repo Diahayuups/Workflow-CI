@@ -71,10 +71,15 @@ print("F1 Score:", f1)
 print("ROC AUC:", roc)
 
 # =============================
-# 5. SAVE MODEL ARTIFACT
+# Save Model
 # =============================
-joblib.dump(best_model, "MLProject/best_random_forest.pkl")
-print("Model saved to MLProject/best_random_forest.pkl")
+import os
 
-print("\n=== TRAINING SELESAI (CI + LOCAL OK!) ===\n")
+os.makedirs("MLProject", exist_ok=True)
 
+model_path = "MLProject/best_random_forest.pkl"
+joblib.dump(best_model, model_path)
+
+mlflow.log_artifact(model_path)
+
+print(f"Model saved successfully at {model_path}")
