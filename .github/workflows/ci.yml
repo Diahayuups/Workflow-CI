@@ -1,58 +1,35 @@
-name: Train Model CI + Docker Build
+docker_build_push:
+  needs: train
+  runs-on: ubuntu-latest
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+  steps:
+  - name: Checkout repo
+    uses: actions/checkout@v4
 
-jobs:
-  train:
-    runs-on: ubuntu-latest
+  - name: Install MLflow
+    run: |
+      pip install mlflow
 
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
+  - name: Copy trained model from mlruns to project root
+    run: |
+      MODEL_PATH=$(find mlruns -name "best_random_forest.pkl" | head -1)
+      cp "$MODEL_PATH" best_random_forest.pkl
+      echo "Model copied to ./best_random_forest.pkl"
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
+  - name: Log in to Docker Hub
+    uses: docker/login-action@v3
+    with:
+      username: ${{ secrets.DOCKERHUB_USERNAME }}
+      password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Install MLflow & dependencies
-      run: |
-        pip install mlflow scikit-learn pandas numpy dagshub joblib
+  - name: Build Docker Image using MLflow
+    run: |
+      mlflow models build-docker -m best_random_forest.pkl -n telco-churn-image
 
-    - name: Run MLflow Project
-      run: mlflow run MLProject --env-manager=local
+  - name: Tag Docker Image
+    run: |
+      docker tag telco-churn-image ${{ secrets.DOCKERHUB_USERNAME }}/telco-churn-image:latest
 
-    - name: Upload model artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: churn-model-artifacts
-        path: mlruns
-
-  docker_build_push:
-    needs: train
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
-
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Build Docker Image using MLflow
-      run: |
-        mlflow models build-docker -m MLProject/best_random_forest.pkl -n telco-churn-image
-
-    - name: Tag Docker Image
-      run: |
-        docker tag telco-churn-image ${{ secrets.DOCKERHUB_USERNAME }}/telco-churn-image:latest
-
-    - name: Push Docker Image
-      run: |
-        docker push ${{ secrets.DOCKERHUB_USERNAME }}/telco-churn-image:latest
+  - name: Push Docker Image
+    run: |
+      docker push ${{ secrets.DOCKERHUB_USERNAME }}/telco-churn-image:latest
